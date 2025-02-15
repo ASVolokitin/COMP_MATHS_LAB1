@@ -24,10 +24,9 @@ def validate_n(n):
     except TypeError: return False
     return True
 
-def validate_matrix_row(row, n):
+def validate_matrix_row(row):
     try:
         row = list(map(float, row))
-        # if len(row) != n: raise ValueError
         return row
     except ValueError:
         print(f"Введённые данные некорректны.")
@@ -48,7 +47,6 @@ def read_n_f():
 def read_matrix():
     choice = input("Вы хотите задать размер матрицы с клавиатуры (K) или из файла (F)? ")
     choice = validate_choice(choice)
-    n = -1
     if choice == 'K':
         n = input("Введите размер матрицы: ").replace(',', '.')
         while True:
@@ -91,7 +89,6 @@ def read_matrix():
                         print(f"Исходные данные некорректы (строка {line_counter} содержит {len(row)} значений вместо {n + 1}).")
                         return None
                     matrix.append(list(map(Decimal, row)))
-                    # lenta = [str(Decimal.normalize(x)) for x in list(map(Decimal, row))]
             return matrix
         except FileNotFoundError:
             print("Файл не найден.")
@@ -101,31 +98,31 @@ def to_upper_triangular(matrix):
     cp_matrix = [row[:] for row in matrix]
     perm_counter = 0
     n = len(cp_matrix)
-    for col in range(n):  # Идём по столбцам
+    for col in range(n):
         max_row_id = col
         max_row_value = cp_matrix[col][0]
-        for row in range(col, n): # Идём по строке от главной диагонали
-            if abs(cp_matrix[row][col]) > abs(max_row_value): # Ищем главный элемент
+        for row in range(col, n):
+            if abs(cp_matrix[row][col]) > abs(max_row_value):
                 max_row_id = row
                 max_row_value = cp_matrix[row][col]
         swap_rows(cp_matrix, col, max_row_id)
-        if (max_row_id != col): perm_counter += 1
-        for row in range(col + 1, n): # Зануляем столбец ниже главной диагонали
-            factor = cp_matrix[row][col] / cp_matrix[col][col] # Вычисляем нормирующий множитель
+        if max_row_id != col: perm_counter += 1
+        for row in range(col + 1, n):
+            factor = cp_matrix[row][col] / cp_matrix[col][col]
             for j in range(col, n + 1):
-                cp_matrix[row][j] -= factor * cp_matrix[col][j] # Избавляемся от переменной в строке
+                cp_matrix[row][j] -= factor * cp_matrix[col][j]
 
     return [cp_matrix, perm_counter]
 
-def determinant(matrix):
-    n = len(matrix)  # Размер квадратной части
-    upper_triangular, perm_cnt = to_upper_triangular([row[:] for row in matrix])  # Копируем и приводим к треугольному виду
+def determinant(det_matrix):
+    n = len(det_matrix)  # Размер квадратной части
+    upper_triangular, perm_cnt = to_upper_triangular([row[:] for row in det_matrix])  # Копируем и приводим к треугольному виду
 
-    det = Decimal(1)
+    mat_det = Decimal(1)
     for i in range(n):
-        det *= upper_triangular[i][i]  # Перемножаем диагональные элементы
+        mat_det *= upper_triangular[i][i]  # Перемножаем диагональные элементы
 
-    return det * (-1)**perm_cnt
+    return mat_det * (-1)**perm_cnt
 
 def numpy_determinant(matrix):
     matrix = np.array([[float(x) for x in row] for row in matrix])
@@ -133,11 +130,9 @@ def numpy_determinant(matrix):
     square_matrix = matrix[:, :n]
     return float(np.linalg.det(square_matrix))
 
-def print_matrix(matrix, precision=2):
-    # formatted_matrix = [[f"{round(num, precision):17g}" for num in row] for row in matrix]
-    # formatted_matrix = [[f"{repr(num)}" for num in row] for row in matrix]
-    formatted_matrix = [[str(Decimal.normalize(x)) for x in row] for row in matrix]
-    col_widths = [max(len(formatted_matrix[row][col]) for row in range(len(matrix))) for col in range(len(matrix[0]))]
+def print_matrix(pr_matrix):
+    formatted_matrix = [[str(Decimal.normalize(x)) for x in row] for row in pr_matrix]
+    col_widths = [max(len(formatted_matrix[row][col]) for row in range(len(pr_matrix))) for col in range(len(pr_matrix[0]))]
     for row in formatted_matrix: print("  ".join(f"{num:>{col_widths[i]}}" for i, num in enumerate(row)))
 
 
@@ -172,7 +167,6 @@ def calc_residuals(matrix, x):
     n = len(A)
     residuals = [Decimal(0)] * n
 
-    # Преобразуем x в Decimal, если это необходимо
     x = [Decimal(val) for val in x]
 
     for i in range(n):
