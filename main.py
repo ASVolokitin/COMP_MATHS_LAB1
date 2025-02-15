@@ -1,4 +1,5 @@
 import numpy as np
+from decimal import Decimal
 
 def validate_choice(choice):
     if choice != 'K' and choice != 'F':
@@ -54,7 +55,7 @@ def read_matrix():
             if validate_n(n): break
             n = input("Введите размер матрицы: ").replace(',', '.')
     else: n = read_n_f()
-    if not validate_n(n): return None
+    if n is None or not validate_n(n): return None
     n = int(n)
     print(f"Установлен размер матрицы: {n}")
 
@@ -70,7 +71,7 @@ def read_matrix():
                 if not validate_matrix_row(row, n): print(f"Введите {n + 1} чисел через пробел.")
                 if len(row) == n + 1: break
                 else: print(f"Вы ввели {len(row)} чисел, нужно {n + 1}.")
-            matrix.append(list(map(float, row)))
+            matrix.append(list(map(Decimal, row)))
 
         return matrix
 
@@ -89,7 +90,8 @@ def read_matrix():
                     if len(row) != n + 1 :
                         print(f"Исходные данные некорректы (строка {line_counter} содержит {len(row)} значений вместо {n + 1}).")
                         return None
-                    matrix.append(list(map(float, row)))
+                    matrix.append(list(map(Decimal, row)))
+                    # lenta = [str(Decimal.normalize(x)) for x in list(map(Decimal, row))]
             return matrix
         except FileNotFoundError:
             print("Файл не найден.")
@@ -119,20 +121,22 @@ def determinant(matrix):
     n = len(matrix)  # Размер квадратной части
     upper_triangular, perm_cnt = to_upper_triangular([row[:] for row in matrix])  # Копируем и приводим к треугольному виду
 
-    det = 1
+    det = Decimal(1)
     for i in range(n):
         det *= upper_triangular[i][i]  # Перемножаем диагональные элементы
 
     return det * (-1)**perm_cnt
 
 def numpy_determinant(matrix):
-    matrix = np.array(matrix)
+    matrix = np.array([[float(x) for x in row] for row in matrix])
     n = matrix.shape[0]
     square_matrix = matrix[:, :n]
     return float(np.linalg.det(square_matrix))
 
 def print_matrix(matrix, precision=2):
-    formatted_matrix = [[f"{round(num, precision):g}" for num in row] for row in matrix]
+    # formatted_matrix = [[f"{round(num, precision):17g}" for num in row] for row in matrix]
+    # formatted_matrix = [[f"{repr(num)}" for num in row] for row in matrix]
+    formatted_matrix = [[str(Decimal.normalize(x)) for x in row] for row in matrix]
     col_widths = [max(len(formatted_matrix[row][col]) for row in range(len(matrix))) for col in range(len(matrix[0]))]
     for row in formatted_matrix: print("  ".join(f"{num:>{col_widths[i]}}" for i, num in enumerate(row)))
 
@@ -154,8 +158,8 @@ def gauss_solve(orig_matrix):
 
 def numpy_solve(matrix):
     try:
-        A = np.array(matrix)[:, :-1]
-        b = np.array(matrix)[:, -1]
+        A = np.array([[float(x) for x in row[:-1]] for row in matrix])
+        b = np.array([float(row[-1]) for row in matrix])
         return np.linalg.solve(A, b)
     except np.linalg.LinAlgError:
         print("У СЛАУ нет единственного решения")
@@ -166,11 +170,14 @@ def calc_residuals(matrix, x):
     A = [row[:-1] for row in matrix]
     b = [row[-1] for row in matrix]
     n = len(A)
-    residuals = [0] * n
+    residuals = [Decimal(0)] * n
+
+    # Преобразуем x в Decimal, если это необходимо
+    x = [Decimal(val) for val in x]
 
     for i in range(n):
-        Ax_i = sum(A[i][j] * x[j] for j in range(n))
-        residuals[i] = Ax_i - b[i]
+        Ax_i = sum(Decimal(A[i][j]) * x[j] for j in range(n))
+        residuals[i] = Ax_i - Decimal(b[i])
 
     return residuals
 
@@ -193,12 +200,11 @@ if matrix is not None:
         np_solution = numpy_solve(matrix)
 
         manual_residuals = calc_residuals(matrix, solution)
-        print("\nРучное решение:", solution)
-        print("Невязка ручного решения:", manual_residuals)
-        print("Суммарно:", sum(abs(x) for x in manual_residuals))
+        print("\nРучное решение:", [float(x) for x in solution])
+        print("Невязка ручного решения:", [float(x) for x in manual_residuals])
+        print("Суммарно:", sum(abs(float(x)) for x in manual_residuals))
 
         np_residuals = list(map(float, calc_residuals(matrix, np_solution)))
-        print("\nРешение с помощью библиотеки:", list(map(float, np_solution)))
+        print("\nРешение с помощью библиотеки:", [float(x) for x in np_solution])
         print("Невязка решения с помощью библиотеки: ", np_residuals)
         print("Суммарно:", sum(abs(x) for x in np_residuals))
-
